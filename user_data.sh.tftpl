@@ -1,0 +1,29 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf install -y nginx
+
+# Website content (shipped from website/index.html)
+echo '${index_html_b64}' | base64 -d > /usr/share/nginx/html/index.html
+
+cat > /etc/nginx/conf.d/site.conf <<'NGINX'
+server {
+    listen 80 default_server;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    location = /health {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+NGINX
+
+nginx -t
+systemctl enable --now nginx
